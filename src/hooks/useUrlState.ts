@@ -1,32 +1,13 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SearchFilters, SortOption, OrderOption } from "../types/repository";
 
 export const useUrlState = (
   filters: SearchFilters,
   updateFilters: (updates: Partial<SearchFilters>) => void
 ) => {
-  // Update URL when filters change
-  useEffect(() => {
-    const params = new URLSearchParams();
+  const [isInitialized, setIsInitialized] = useState(false);
 
-    if (filters.query) params.set("q", filters.query);
-    if (filters.language) params.set("language", filters.language);
-    if (filters.minStars) params.set("minStars", filters.minStars);
-    if (filters.maxStars) params.set("maxStars", filters.maxStars);
-    if (filters.license) params.set("license", filters.license);
-    if (filters.sort !== "stars") params.set("sort", filters.sort);
-    if (filters.order !== "desc") params.set("order", filters.order);
-    if (filters.page !== 1) params.set("page", filters.page.toString());
-    if (filters.perPage !== 10)
-      params.set("perPage", filters.perPage.toString());
-
-    const newUrl = `${window.location.pathname}${
-      params.toString() ? "?" + params.toString() : ""
-    }`;
-    window.history.replaceState({}, "", newUrl);
-  }, [filters]);
-
-  // Load filters from URL on mount
+  // load filters from URL on mount
   const loadFromUrl = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
     const urlFilters: Partial<SearchFilters> = {};
@@ -46,9 +27,34 @@ export const useUrlState = (
     if (Object.keys(urlFilters).length > 0) {
       updateFilters(urlFilters);
     }
+    setIsInitialized(true); //  initialize the state after loading from URL
   }, [updateFilters]);
 
+  // load filters and initialize the state from URL only once on mount
   useEffect(() => {
     loadFromUrl();
   }, [loadFromUrl]);
+
+  //  update the url when filters change and the state is initialized
+  useEffect(() => {
+    if (!isInitialized) return; // don't update URL until we've loaded from it
+
+    const params = new URLSearchParams();
+
+    if (filters.query) params.set("q", filters.query);
+    if (filters.language) params.set("language", filters.language);
+    if (filters.minStars) params.set("minStars", filters.minStars);
+    if (filters.maxStars) params.set("maxStars", filters.maxStars);
+    if (filters.license) params.set("license", filters.license);
+    if (filters.sort !== "stars") params.set("sort", filters.sort);
+    if (filters.order !== "desc") params.set("order", filters.order);
+    if (filters.page !== 1) params.set("page", filters.page.toString());
+    if (filters.perPage !== 10)
+      params.set("perPage", filters.perPage.toString());
+
+    const newUrl = `${window.location.pathname}${
+      params.toString() ? "?" + params.toString() : ""
+    }`;
+    window.history.replaceState({}, "", newUrl);
+  }, [filters, isInitialized]);
 };
